@@ -1,6 +1,17 @@
 version: '3.8'
 
 services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: fluxura
+      POSTGRES_USER: fluxura
+      POSTGRES_PASSWORD: fluxura
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
   redis:
     image: redis:7
     ports:
@@ -9,8 +20,8 @@ services:
   rabbitmq:
     image: rabbitmq:3-management
     ports:
-      - "5672:5672"     # Broker
-      - "15672:15672"   # Dashboard web
+      - "5672:5672"
+      - "15672:15672"
     environment:
       RABBITMQ_DEFAULT_USER: admin
       RABBITMQ_DEFAULT_PASS: admin
@@ -23,3 +34,6 @@ services:
       - CELERY_BROKER_URL=redis://redis:6379/0
     depends_on:
       - redis
+
+volumes:
+  pgdata:
