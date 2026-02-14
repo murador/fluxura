@@ -18,7 +18,7 @@ def calculate_totals(payload: InvoicePayload) -> dict:
     totale = imponibile + iva
     repo.set_status(payload.invoice_id, InvoiceStatus.CALCOLATA)
     return {
-        "payload": payload,
+        "payload": payload.to_dict(),
         "totali": {
             "imponibile": round(imponibile, 2),
             "iva": round(iva, 2),
