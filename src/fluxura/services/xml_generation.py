@@ -2,14 +2,14 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 
 from fluxura.config import settings
-from fluxura.domain.models import InvoiceStatus
+from fluxura.domain.models import InvoicePayload, InvoiceStatus
 from fluxura.infrastructure.repository import InvoiceRepository
 
 repo = InvoiceRepository()
 
 
 def generate_fatturapa_xml(data: dict) -> Path:
-    payload = data["payload"]
+    payload = InvoicePayload.from_dict(data["payload"])
     totals = data["totali"]
 
     root = ET.Element("p:FatturaElettronica", attrib={

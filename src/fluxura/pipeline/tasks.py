@@ -1,6 +1,7 @@
 from celery import chain
 
 from fluxura.celery_app import celery_app
+from fluxura.domain.models import InvoicePayload
 from fluxura.services.calculation import calculate_totals
 from fluxura.services.extraction import extract_invoice
 from fluxura.services.pec_sender import send_via_pec
@@ -10,15 +11,12 @@ from fluxura.services.xml_generation import generate_fatturapa_xml
 
 @celery_app.task(name="fluxura.extract")
 def extraction_task(invoice_id: int) -> dict:
-    return extract_invoice(invoice_id).__dict__
+    return extract_invoice(invoice_id).to_dict()
 
 
 @celery_app.task(name="fluxura.calculate")
 def calculation_task(payload_data: dict) -> dict:
-    # ricostruzione semplificata: pipeline iniziale
-    from fluxura.services.extraction import extract_invoice
-
-    payload = extract_invoice(payload_data["invoice_id"])
+    payload = InvoicePayload.from_dict(payload_data)
     return calculate_totals(payload)
 
 
