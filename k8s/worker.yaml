@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fluxura-worker
+  namespace: fluxura
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fluxura-worker
+  template:
+    metadata:
+      labels:
+        app: fluxura-worker
+    spec:
+      containers:
+        - name: worker
+          image: fluxura:latest
+          imagePullPolicy: IfNotPresent
+          command: ["celery", "-A", "fluxura.celery_app:celery_app", "worker", "-l", "info"]
+          envFrom:
+            - configMapRef:
+                name: fluxura-config
