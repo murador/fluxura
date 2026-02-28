@@ -62,3 +62,31 @@ from fluxura.pipeline.tasks import dispatch_invoice_pipeline
 
 dispatch_invoice_pipeline(invoice_id=42)
 ```
+
+## Installazione automatizzata
+
+### Docker
+
+```bash
+./scripts/docker/install.sh
+```
+
+Script di cleanup:
+
+```bash
+./scripts/docker/uninstall.sh
+```
+
+### Kubernetes
+
+Prerequisiti: `kubectl` configurato (cluster locale o remoto) e Docker disponibile per build immagine.
+
+```bash
+./scripts/k8s/deploy.sh
+```
+
+Cleanup ambiente Kubernetes:
+
+```bash
+./scripts/k8s/teardown.sh
+```
