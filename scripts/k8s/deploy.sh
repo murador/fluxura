@@ -21,6 +21,7 @@ kubectl apply -f k8s/postgres.yaml
 kubectl apply -f k8s/redis.yaml
 kubectl apply -f k8s/rabbitmq.yaml
 kubectl apply -f k8s/worker.yaml
+kubectl -n fluxura set image deployment/fluxura-worker worker="$IMAGE_NAME"
 kubectl apply -f k8s/flower.yaml
 
 printf "\nDeploy completato.\n"
