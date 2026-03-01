@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: worker
-          image: fluxura:latest
+          image: __IMAGE_NAME__
           imagePullPolicy: IfNotPresent
           command: ["celery", "-A", "fluxura.celery_app:celery_app", "worker", "-l", "info"]
           envFrom:
