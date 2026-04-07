@@ -1,3 +1,5 @@
+"""Servizio di generazione XML FatturaPA (versione semplificata)."""
+
 from pathlib import Path
 import xml.etree.ElementTree as ET
 
@@ -9,13 +11,19 @@ repo = InvoiceRepository()
 
 
 def generate_fatturapa_xml(data: dict) -> Path:
+    """Crea un XML minimale FatturaPA e lo salva nel percorso configurato."""
     payload = InvoicePayload.from_dict(data["payload"])
     totals = data["totali"]
 
-    root = ET.Element("p:FatturaElettronica", attrib={
-        "xmlns:p": "http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.2",
-        "versione": "FPR12",
-    })
+    # Nodo radice con namespace ufficiale e versione tracciato FPR12.
+    root = ET.Element(
+        "p:FatturaElettronica",
+        attrib={
+            "xmlns:p": "http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.2",
+            "versione": "FPR12",
+        },
+    )
+    # Struttura minima necessaria per rappresentare i dati principali documento.
     body = ET.SubElement(root, "FatturaElettronicaBody")
     dati = ET.SubElement(body, "DatiGenerali")
     dati_doc = ET.SubElement(dati, "DatiGeneraliDocumento")
@@ -23,6 +31,7 @@ def generate_fatturapa_xml(data: dict) -> Path:
     ET.SubElement(dati_doc, "Data").text = payload.data.isoformat()
     ET.SubElement(dati_doc, "ImportoTotaleDocumento").text = str(totals["totale"])
 
+    # Prepara directory di output e nome file deterministico per invoice_id.
     output_dir = Path(settings.invoice_output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     file_path = output_dir / f"fattura_{payload.invoice_id}.xml"

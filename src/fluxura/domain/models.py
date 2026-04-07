@@ -1,9 +1,17 @@
+"""Modelli di dominio della pipeline fatture.
+
+Qui sono definiti i tipi principali scambiati tra i vari servizi: stato
+fattura, riga fattura e payload complessivo.
+"""
+
 from dataclasses import dataclass
 from datetime import date
 from enum import StrEnum
 
 
 class InvoiceStatus(StrEnum):
+    """Stati logici del ciclo di vita di una fattura nella pipeline."""
+
     ESTRATTA = "estratta"
     CALCOLATA = "calcolata"
     XML_GENERATO = "xml_generato"
@@ -14,6 +22,8 @@ class InvoiceStatus(StrEnum):
 
 @dataclass(slots=True)
 class InvoiceLine:
+    """Rappresenta una singola riga economica della fattura."""
+
     descrizione: str
     quantita: float
     prezzo_unitario: float
@@ -21,6 +31,7 @@ class InvoiceLine:
     sconto_percentuale: float = 0.0
 
     def to_dict(self) -> dict:
+        """Serializza la riga in un dizionario JSON-friendly."""
         return {
             "descrizione": self.descrizione,
             "quantita": self.quantita,
@@ -31,11 +42,14 @@ class InvoiceLine:
 
     @classmethod
     def from_dict(cls, data: dict) -> "InvoiceLine":
+        """Ricostruisce ``InvoiceLine`` da un dizionario serializzato."""
         return cls(**data)
 
 
 @dataclass(slots=True)
 class InvoicePayload:
+    """Payload completo della fattura lungo le fasi di orchestrazione."""
+
     invoice_id: int
     cedente: dict
     destinatario: dict
@@ -44,6 +58,7 @@ class InvoicePayload:
     linee: list[InvoiceLine]
 
     def to_dict(self) -> dict:
+        """Converte il payload in formato serializzabile su code/task queue."""
         return {
             "invoice_id": self.invoice_id,
             "cedente": self.cedente,
@@ -55,6 +70,7 @@ class InvoicePayload:
 
     @classmethod
     def from_dict(cls, data: dict) -> "InvoicePayload":
+        """Deserializza il payload rigenerando anche le righe tipizzate."""
         return cls(
             invoice_id=data["invoice_id"],
             cedente=data["cedente"],
