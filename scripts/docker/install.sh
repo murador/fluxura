@@ -10,7 +10,7 @@ printf "[docker] Build immagine applicativa: %s\n" "$IMAGE_NAME"
 docker build -t "$IMAGE_NAME" .
 
 printf "[docker] Avvio servizi di supporto (PostgreSQL, Redis, RabbitMQ, Flower)\n"
-docker compose up -d postgres redis rabbitmq flower
+docker-compose up -d postgres redis rabbitmq flower
 
 printf "[docker] Avvio worker Fluxura in container dedicato\n"
 docker rm -f fluxura-worker >/dev/null 2>&1 || true
