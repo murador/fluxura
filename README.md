@@ -43,7 +43,7 @@ fluxura/
 ## Quick start
 
 ```bash
-docker compose up -d
+docker-compose up -d
 python -m venv .venv
 source .venv/bin/activate
 pip install -e .
