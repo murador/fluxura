@@ -55,6 +55,42 @@ Avvio worker Celery:
 celery -A fluxura.celery_app:celery_app worker -l info
 ```
 
+### Troubleshooting: `pkg_resources.VersionConflict` su `vine`
+
+Se all'avvio di Celery compare un errore simile a:
+
+`pkg_resources.VersionConflict: (vine 5.0.0 (...), Requirement.parse('vine<6.0,>=5.1.0'))`
+
+la causa più comune è un **mix tra pacchetti di sistema e pacchetti installati in virtualenv**:
+
+- lo script `/usr/bin/celery` (installato via `apt`) usa `pkg_resources` e cerca dipendenze nei path di sistema;
+- la versione di `celery` caricata richiede `vine>=5.1.0`;
+- nel path attivo viene trovata `vine==5.0.0` da `/usr/lib/python3/dist-packages`, incompatibile.
+
+Verifiche utili:
+
+```bash
+which celery
+python -c "import sys; print('\\n'.join(sys.path))"
+python -m pip show celery vine
+python -m pip check
+```
+
+Risoluzione consigliata (isolamento ambiente):
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -U pip setuptools wheel
+python -m pip install -e .
+python -m celery -A fluxura.celery_app:celery_app worker -l info
+```
+
+Note:
+
+- preferire `python -m celery` evita di invocare accidentalmente `/usr/bin/celery`;
+- evitare installazioni miste `apt` + `pip` nello stesso interprete Python.
+
 Dispatch pipeline:
 
 ```python
