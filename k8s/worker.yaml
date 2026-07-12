@@ -16,7 +16,7 @@ spec:
       containers:
         - name: worker
           image: fluxura:latest
-          imagePullPolicy: Never
+          imagePullPolicy: IfNotPresent
           command: ["celery", "-A", "fluxura.celery_app:celery_app", "worker", "-l", "info"]
           envFrom:
             - configMapRef:
