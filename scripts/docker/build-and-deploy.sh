@@ -109,6 +109,12 @@ print_success "Docker installato"
 print_success "kubectl installato"
 print_success "DOCKER_USERNAME impostato: $DOCKER_USERNAME"
 
+# Verifica che sia effettuato il login
+if ! docker info > /dev/null 2>&1 || ! docker auth <(echo "$DOCKER_PASSWORD") 2>/dev/null; then
+  print_error "Non sei autenticato a Docker Hub. Esegui: docker login"
+  exit 1
+fi
+
 ################################################################################
 # PASSO 2: Configurazione percorsi e variabili
 ################################################################################
