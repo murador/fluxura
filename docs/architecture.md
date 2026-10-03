@@ -26,3 +26,22 @@ Lo stato viene aggiornato dal repository con enum `InvoiceStatus`:
 - Pipeline asincrona distribuita: `pipeline/tasks.py` (Celery chain).
 - Workflow declarativo: `pipeline/workflows/prefect_flow.py`.
 - Alternativa enterprise: `pipeline/workflows/airflow_dag.py`.
+
+## Test su killercoda o altrove 
+
+git clone https://github.com/murador/fluxura.git
+DOCKER_USERNAME=glutters IMAGE_TAG=v1.1.0 ./scripts/docker/build-and-deploy.sh --deploy-only
+
+
+
+
+
+
+
+
+
+
+
+
+
+
