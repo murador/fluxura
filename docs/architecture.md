@@ -29,9 +29,11 @@ Lo stato viene aggiornato dal repository con enum `InvoiceStatus`:
 
 ## Test su killercoda o altrove 
 
-fai docker login se l'ambiente è temporaneo
-git clone https://github.com/murador/fluxura.git
-DOCKER_USERNAME=glutters IMAGE_TAG=v1.1.0 ./scripts/docker/build-and-deploy.sh --deploy-only
+fai `docker login` se l'ambiente è temporaneo:
+
+`git clone https://github.com/murador/fluxura.git`
+`DOCKER_USERNAME=glutters IMAGE_TAG=v1.1.0 ./scripts/docker/build-and-deploy.sh --deploy-only`
+
 
 
 
