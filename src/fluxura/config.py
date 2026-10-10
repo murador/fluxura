@@ -31,6 +31,8 @@ class Settings(BaseSettings):
 
     # Directory destinazione dove salvare gli XML FatturaPA generati.
     invoice_output_dir: str = "artifacts/xml"
+    # XSD FatturaPA per la validazione (vuoto = schema incluso nel pacchetto).
+    xsd_path: str = ""
 
 
 # Istanza singleton importabile dal resto del progetto.

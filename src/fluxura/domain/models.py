@@ -16,6 +16,7 @@ class InvoiceStatus(StrEnum):
     CALCOLATA = "calcolata"
     XML_GENERATO = "xml_generato"
     VERIFICATA = "verificata"
+    ERRORE_VALIDAZIONE = "errore_validazione"
     INVIATA = "inviata"
     ERRORE = "errore"
 
