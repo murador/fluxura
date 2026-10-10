@@ -174,7 +174,7 @@ kubectl -n fluxura get events --sort-by='.lastTimestamp'
 ✅ I **tempi di esecuzione** sono accettabili (< 50 ms totali).
 
 Prossimi passi:
-- [ ] Implementare validazione XSD ufficiale
+- [x] Implementare validazione XSD ufficiale
 - [ ] Configurare credenziali PEC
 - [ ] Aggiungere persistenza per i file
 - [ ] Scrivere test unitari per ogni fase
