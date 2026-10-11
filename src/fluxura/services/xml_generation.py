@@ -12,6 +12,11 @@ from fluxura.infrastructure.repository import InvoiceRepository
 
 repo = InvoiceRepository()
 
+'''
+Namespace e costanti per la generazione dell'XML FatturaPA. 
+La costante NS rappresenta lo spazio dei nomi XML,
+ mentre _CENT è utilizzata per la quantizzazione dei valori monetari, ovvero il massimo sfrido di arrotondamento consentito.
+'''
 NS = "http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.2"
 _CENT = Decimal("0.01")
 
@@ -20,17 +25,24 @@ def _dec(value: float | int | str) -> Decimal:
     return Decimal(str(value))
 
 
+'''
+Funzioni di utilità per la gestione dei valori monetari e la creazione di elementi XML.
+'''
 def _money(value: Decimal) -> str:
     return str(value.quantize(_CENT, rounding=ROUND_HALF_UP))
 
-
+'''
+Aggiunge un elemento figlio all'elemento XML specificato.
+'''
 def _add(parent: etree._Element, tag: str, text: str | None = None) -> etree._Element:
     el = etree.SubElement(parent, tag)
     if text is not None:
         el.text = text
     return el
 
-
+'''
+Aggiunge le informazioni sulla sede del soggetto.
+'''
 def _sede(parent: etree._Element, soggetto: dict) -> None:
     sede = _add(parent, "Sede")
     _add(sede, "Indirizzo", soggetto["indirizzo"])
@@ -41,6 +53,9 @@ def _sede(parent: etree._Element, soggetto: dict) -> None:
     _add(sede, "Nazione", soggetto.get("nazione", "IT"))
 
 
+'''
+Aggiunge le informazioni anagrafiche del soggetto.
+'''
 def _dati_anagrafici(parent: etree._Element, soggetto: dict, regime: str | None = None) -> None:
     dati = _add(parent, "DatiAnagrafici")
     fiscale = _add(dati, "IdFiscaleIVA")
@@ -50,7 +65,10 @@ def _dati_anagrafici(parent: etree._Element, soggetto: dict, regime: str | None 
     if regime:
         _add(dati, "RegimeFiscale", regime)
 
-
+'''
+Costruisce l'albero XML della fattura elettronica a partire dal payload fornito.
+Restituisce una tupla contenente l'elemento radice dell'XML e il totale del documento.
+'''
 def build_fatturapa_tree(payload: InvoicePayload) -> tuple[etree._Element, Decimal]:
     """Costruisce l'albero XML e restituisce anche il totale documento."""
     root = etree.Element(f"{{{NS}}}FatturaElettronica", nsmap={"p": NS}, versione="FPR12")
@@ -76,6 +94,10 @@ def build_fatturapa_tree(payload: InvoicePayload) -> tuple[etree._Element, Decim
     beni = etree.Element("DatiBeniServizi")
     riepilogo: dict[Decimal, Decimal] = defaultdict(Decimal)
 
+    '''
+    Itera sulle linee della fattura e costruisce gli elementi XML corrispondenti.
+    Aggiorna anche il riepilogo degli imponibili per ciascuna aliquota IVA.
+    '''
     for numero, linea in enumerate(payload.linee, start=1):
         qta = _dec(linea.quantita)
         unitario = _dec(linea.prezzo_unitario)
@@ -116,7 +138,10 @@ def build_fatturapa_tree(payload: InvoicePayload) -> tuple[etree._Element, Decim
     body.append(beni)
     return root, totale_documento
 
-
+'''
+Genera il file XML della FatturaPA a partire dai dati forniti.
+Restituisce il percorso del file XML generato.
+'''
 def generate_fatturapa_xml(data: dict) -> Path:
     """Genera l'XML FatturaPA completo e lo salva nel percorso configurato."""
     payload = InvoicePayload.from_dict(data["payload"])

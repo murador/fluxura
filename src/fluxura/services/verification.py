@@ -11,7 +11,10 @@ from fluxura.domain.models import InvoiceStatus
 from fluxura.infrastructure.repository import InvoiceRepository
 
 repo = InvoiceRepository()
-
+'''
+Servizio per la validazione tecnica dei file XML delle fatture elettroniche
+contro lo schema XSD ufficiale e gestione dello stato di approvazione.  
+'''
 DEFAULT_XSD_PATH = (
     Path(__file__).resolve().parents[1]
     / "schemas"
@@ -19,7 +22,9 @@ DEFAULT_XSD_PATH = (
     / "Schema_del_file_xml_FatturaPA_v1.2.2.xsd"
 )
 
-
+'''
+Percorso predefinito dello schema XSD per la validazione delle fatture elettroniche.
+'''
 @dataclass(frozen=True, slots=True)
 class XsdError:
     """Singolo errore di validazione con posizione nel documento."""
@@ -32,7 +37,10 @@ class XsdError:
     def __str__(self) -> str:
         return f"riga {self.line}, colonna {self.column}: {self.message} ({self.path})"
 
-
+'''
+Eccezione sollevata quando un file XML non è conforme allo schema XSD.
+Contiene la lista degli errori di validazione riscontrati.  
+'''
 class XmlValidationError(ValueError):
     """XML non conforme allo schema XSD (o non well-formed)."""
 
@@ -40,7 +48,9 @@ class XmlValidationError(ValueError):
         self.errors = errors
         super().__init__("; ".join(str(e) for e in errors))
 
-
+'''
+Risoluzione del percorso dello schema XSD da utilizzare.
+'''
 def resolve_xsd_path(xsd_path: Path | None = None) -> Path:
     """Sceglie l'XSD: argomento esplicito, poi settings, poi schema incluso."""
     if xsd_path is not None:
@@ -49,14 +59,21 @@ def resolve_xsd_path(xsd_path: Path | None = None) -> Path:
         return Path(settings.xsd_path)
     return DEFAULT_XSD_PATH
 
-
+'''
+Caricamento e caching dello schema XSD.
+Viene utilizzato il caching per evitare ricaricamenti ripetuti dello schema.
+Attenzione: il caching è limitato a 4 schemi diversi con un meccanismo LRU (Least Recently Used).
+'''
 @lru_cache(maxsize=4)
 def _load_schema(xsd_path: str) -> etree.XMLSchema:
     """Carica e cachea lo schema; nessun accesso di rete durante il parsing."""
     parser = etree.XMLParser(no_network=True, resolve_entities=False)
     return etree.XMLSchema(etree.parse(xsd_path, parser))
 
-
+'''
+Validazione di un file XML contro lo schema XSD.
+Imposta lo stato della fattura e solleva eccezioni in caso di errori.
+'''
 def validate_xml(xml_path: Path, xsd_path: Path | None = None) -> bool:
     """Valida l'XML contro l'XSD ufficiale e, se conforme, imposta VERIFICATA.
 
