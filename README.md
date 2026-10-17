@@ -34,6 +34,15 @@ fluxura/
 └── pyproject.toml
 ```
 
+## Punti di caricamento (ingestion)
+
+L'API Gateway (`fluxura.api.app`, nessuna autenticazione per ora) accoda la pipeline su Celery:
+
+- `POST /invoices` – fattura in formato JSON (validata con Pydantic, `fluxura.ingestion.schemas.InvoiceIn`).
+- `POST /invoices/{invoice_id}/process` – carica la fattura da Postgres (tabelle `invoices` / `invoice_lines`, vedi `fluxura.ingestion.sources`).
+
+Avvio: `uvicorn fluxura.api.app:app`. Programmaticamente: `dispatch_invoice_pipeline(invoice_id=42)` oppure `dispatch_invoice_pipeline(payload={...})`.
+
 ## Tecnologie chiave
 
 - **Celery + Redis/RabbitMQ**: esecuzione task asincroni e scalabilità orizzontale.
@@ -54,6 +63,29 @@ Avvio worker Celery:
 ```bash
 celery -A fluxura.celery_app:celery_app worker -l info
 ```
+
+### Popolamento database demo
+
+Per un ambiente temporaneo come Killercoda, dopo l'avvio dei container si puo'
+creare lo schema minimo e caricare due fatture inventate:
+
+```bash
+docker compose up -d postgres
+./scripts/docker/seed_database.sh
+```
+
+Lo script e' idempotente e usa il servizio `postgres` del
+`docker-compose.yml`. Le fatture demo hanno gli ID `1001` e `1002`; per
+verificarle:
+
+```bash
+docker compose exec postgres psql -U fluxura -d fluxura \
+  -c "SELECT id, numero_fattura FROM invoices ORDER BY id;"
+```
+
+Per provare il caricamento dalla sorgente Postgres, configurare l'applicazione
+con `FLUXURA_DATABASE_URL=postgresql+psycopg://fluxura:fluxura@localhost:5432/fluxura`
+e usare `invoice_id=1001`.
 
 ### Troubleshooting: `pkg_resources.VersionConflict` su `vine`
 

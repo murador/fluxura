@@ -3,7 +3,9 @@
 from celery import chain
 
 from fluxura.celery_app import celery_app
-from fluxura.domain.models import InvoicePayload
+from fluxura.domain.models import InvoicePayload, InvoiceStatus
+from fluxura.infrastructure.repository import InvoiceRepository
+from fluxura.ingestion.sources import JsonInvoiceSource, PostgresInvoiceSource
 from fluxura.services.calculation import calculate_totals
 from fluxura.services.extraction import extract_invoice
 from fluxura.services.pec_sender import send_via_pec
@@ -48,10 +50,29 @@ def pec_sending_task(xml_path: str) -> str:
     return xml_path
 
 
-def dispatch_invoice_pipeline(invoice_id: int):
-    """Lancia una catena Celery che collega automaticamente tutti gli step."""
+@celery_app.task(name="fluxura.ingest_db")
+def ingest_db_task(invoice_id: int) -> dict:
+    """Punto di caricamento Postgres: legge la fattura dal database."""
+    payload = PostgresInvoiceSource().load(invoice_id)
+    InvoiceRepository().set_status(invoice_id, InvoiceStatus.ESTRATTA)
+    return payload.to_dict()
+
+
+@celery_app.task(name="fluxura.ingest_json")
+def ingest_json_task(message: dict) -> dict:
+    """Punto di caricamento REST: valida il messaggio JSON e produce il payload."""
+    payload = JsonInvoiceSource().load(message)
+    InvoiceRepository().set_status(payload.invoice_id, InvoiceStatus.ESTRATTA)
+    return payload.to_dict()
+
+
+def dispatch_invoice_pipeline(invoice_id: int | None = None, payload: dict | None = None):
+    """Lancia la catena Celery partendo da Postgres (``invoice_id``) o da JSON (``payload``)."""
+    if (invoice_id is None) == (payload is None):
+        raise ValueError("Specificare esattamente uno tra invoice_id e payload")
+    first = ingest_db_task.s(invoice_id) if payload is None else ingest_json_task.s(payload)
     return chain(
-        extraction_task.s(invoice_id),
+        first,
         calculation_task.s(),
         generation_task.s(),
         verification_task.s(),
