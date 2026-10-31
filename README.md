@@ -158,3 +158,29 @@ Cleanup ambiente Kubernetes:
 ```bash
 ./scripts/k8s/teardown.sh
 ```
+
+### Killercoda
+
+Per avviare Fluxura in un playground Kubernetes di [Killercoda](https://killercoda.com) (cluster con `kubectl` e Docker già disponibili) usa `scripts/killercoda/start.sh`. Dal terminale del playground:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/murador/fluxura/main/scripts/killercoda/start.sh | bash
+```
+
+oppure, con il repo già clonato:
+
+```bash
+bash scripts/killercoda/start.sh
+```
+
+Lo script:
+
+1. attende che il cluster sia pronto (API server raggiungibile e nodi `Ready`);
+2. clona il repository in `~/fluxura` (se non lanciato dal repo);
+3. costruisce l'immagine Docker e la importa in containerd (`ctr`), perché `deploy.sh` la carica solo su kind;
+4. esegue `scripts/k8s/deploy.sh` e imposta `imagePullPolicy: IfNotPresent` sul worker;
+5. attende i rollout e avvia il port-forward di Flower su `0.0.0.0:5555`.
+
+Per aprire Flower usa il menu **Traffic / Ports** di Killercoda sulla porta `5555`. Stato dei pod: `kubectl -n fluxura get pods`.
+
+Variabili opzionali: `REPO_URL`, `BRANCH` (default `main`), `IMAGE_NAME` (default `fluxura:latest`), `WORKDIR` (default `~/fluxura`).
