@@ -89,6 +89,49 @@ deve applicare una seconda formula o una politica di arrotondamento
 indipendente. La catena Celery deve trasferire il risultato usando il formato
 serializzabile definito sopra.
 
+### Logiche personalizzabili per prezzi e quantità
+
+Il calcolo deve consentire di applicare regole di business specifiche per
+determinare o modificare prezzi unitari e quantità, senza incorporare tali
+regole direttamente nel servizio fiscale. Introdurre un contratto tipizzato
+per una strategia di determinazione delle righe, che riceva il payload e un
+contesto esplicito (ad esempio identificativo cliente, listino o versione
+delle regole) e restituisca per ciascuna riga i valori normalizzati di prezzo
+unitario e quantità, oltre a un identificativo e una versione della strategia.
+
+Prevedere:
+
+- una strategia predefinita che conserva i prezzi e le quantità ricevuti, per
+  mantenere il comportamento corrente;
+- la possibilità di selezionare una strategia tramite configurazione
+  applicativa o iniezione di dipendenze, senza riferimenti globali nascosti;
+- adapter per logiche esterne, che possono essere implementazioni locali
+  registrate dall'applicazione oppure servizi remoti. La pipeline Celery
+  invoca l'adapter e non dipende dal protocollo o dal provider specifico;
+- validazione dell'output: corrispondenza delle righe d'ingresso, valori
+  decimali finiti, quantità positive e rispetto dei limiti configurati. Un
+  output mancante, extra o non valido deve interrompere la fase con un errore
+  esplicito;
+- timeout, gestione degli errori e retry espliciti per gli adapter remoti.
+  Un errore del servizio esterno non deve causare il passaggio silenzioso
+  alla strategia predefinita, perché produrrebbe prezzi o quantità diversi
+  da quelli attesi;
+- registrazione nel risultato del calcolo dell'identificativo/versione della
+  strategia e dei valori effettivamente applicati, così da rendere
+  riproducibile e verificabile il documento prodotto.
+
+La strategia personalizzata determina i dati di prezzo e quantità; il calcolo
+fiscale successivo resta centralizzato e applica le stesse regole condivise di
+sconto, imponibile, IVA e arrotondamento. Se una regola esterna deve anche
+modificare aliquote, sconti o imposte, ciò va trattato come estensione
+esplicita del contratto e sottoposto a una decisione funzionale separata.
+
+Non caricare codice arbitrario da configurazione o da input della richiesta.
+Le implementazioni locali devono essere fornite e autorizzate
+dall'applicazione; per i servizi remoti endpoint e credenziali devono essere
+configurati fuori dai payload fattura. La richiesta e la risposta
+dell'integrazione devono usare un formato versionato e serializzabile.
+
 ### Politica di arrotondamento da formalizzare
 
 Prima dell'implementazione va confermata con i requisiti contabili/FatturaPA la
@@ -199,10 +242,22 @@ stato intermedio va definita e testata.
 - Importi con più di due decimali, valori esattamente a metà centesimo e
   quantità frazionarie.
 - Sconti ai limiti consentiti e aliquote IVA diverse.
+- Strategia predefinita che lascia invariati prezzi e quantità.
+- Strategia personalizzata che modifica prezzi e quantità e produce totali e
+  XML coerenti con i valori applicati.
+- Rifiuto di output incompleti, non corrispondenti alle righe o con valori
+  non validi; propagazione degli errori della strategia senza fallback
+  silenziosi.
+- Serializzazione dei risultati e tracciabilità dell'identificativo/versione
+  della strategia lungo la catena Celery.
 - Riepilogo corretto per aliquota e totale documento.
 - Corrispondenza tra risultato del calcolo e valori nel file XML.
 - Serializzazione/deserializzazione dei decimali attraverso il confine Celery.
 - Rifiuto degli input fuori dai limiti e dei valori non finiti o non validi.
+
+Per gli adapter remoti, usare test con provider simulato per timeout, risposta
+non valida, errore temporaneo e retry; i test ordinari non devono chiamare
+servizi esterni reali.
 
 ### Test del repository
 
@@ -233,22 +288,30 @@ essere eseguiti con PostgreSQL, cioè il database di destinazione.
 ## 5. Sequenza d'implementazione
 
 1. Confermare la politica fiscale di arrotondamento e il significato degli
-   stati, soprattutto retry e rielaborazione.
-2. Introdurre tipi decimali e un risultato di calcolo comune; aggiungere test
-   unitari prima di collegare la persistenza.
-3. Adeguare payload e serializzazione Celery senza usare `float` nei passaggi
-   monetari.
-4. Definire il modello SQLAlchemy e la migrazione iniziale.
-5. Implementare il repository transazionale e i test di persistenza.
-6. Collegare i task e i servizi al repository, eliminando il fallback
+   stati, soprattutto retry e rielaborazione; definire inoltre quali dati di
+   contesto possono selezionare una strategia personalizzata.
+2. Definire il contratto della strategia prezzi/quantità, il formato
+   versionato di input/output e i limiti di validazione.
+3. Introdurre tipi decimali, la strategia predefinita e un risultato di
+   calcolo comune; aggiungere test unitari prima di collegare la persistenza.
+4. Adeguare payload e serializzazione Celery senza usare `float` nei passaggi
+   monetari e preservando la versione della strategia applicata.
+5. Definire il modello SQLAlchemy e la migrazione iniziale.
+6. Implementare il repository transazionale e i test di persistenza.
+7. Collegare i task e i servizi al repository, eliminando il fallback
    dimostrativo.
-7. Eseguire i test d'integrazione su PostgreSQL e aggiornare la documentazione
+8. Eseguire i test d'integrazione su PostgreSQL e aggiornare la documentazione
    architetturale in base al comportamento implementato.
 
 ## Criteri di accettazione del traguardo
 
 - Tutte le operazioni monetarie sono eseguite con `Decimal`; nessuna fase
   converte gli importi in `float`.
+- Prezzi e quantità sono personalizzabili tramite un contratto esplicito,
+  con strategia predefinita, validazione dell'output e tracciabilità della
+  versione applicata.
+- Un errore di una logica esterna non attiva fallback impliciti e non produce
+  un documento apparentemente riuscito con valori non verificati.
 - Una sola politica documentata governa calcolo, riepiloghi IVA e XML.
 - Il risultato calcolato e quello rappresentato nell'XML coincidono secondo
   tale politica.
@@ -262,8 +325,12 @@ essere eseguiti con PostgreSQL, cioè il database di destinazione.
 
 1. Quale regola contabile/FatturaPA adottare per arrotondare righe, imponibili
    aggregati e imposte, e se `ROUND_HALF_UP` è la modalità richiesta.
-2. Se conservare soltanto lo stato corrente oppure richiedere fin da subito
+2. Se le logiche esterne saranno soltanto plugin locali, servizi remoti o
+   entrambe le forme; quali dati di contesto sono ammessi per selezionarle.
+3. Se le strategie possono modificare esclusivamente prezzi e quantità o
+   anche sconti/aliquote, e quali limiti di business applicare all'output.
+4. Se conservare soltanto lo stato corrente oppure richiedere fin da subito
    una tabella di audit degli eventi e dei retry.
-3. Come trattare una richiesta di elaborazione ripetuta: ripartire sempre
+5. Come trattare una richiesta di elaborazione ripetuta: ripartire sempre
    dall'ingestione, riprendere da uno stato intermedio o rifiutare le
    transizioni non valide.
